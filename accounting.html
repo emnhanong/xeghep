@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VNP — Kế toán</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --vp:#1D9E75; --vp2:#0F6E56; --hn:#185FA5; --amber:#BA7517; --red:#A32D2D;
+    --bg:#F7F6F2; --bg2:#FFFFFF; --bg3:#EEECEA;
+    --border:rgba(0,0,0,.09); --border2:rgba(0,0,0,.16);
+    --text:#1a1a18; --text2:#6b6a65; --text3:#9c9b96;
+    --r:8px; --rl:12px;
+  }
+  
+  }
+  body { font-family: -apple-system,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
+
+  /* TOPBAR */
+  .topbar { background:var(--bg2); border-bottom:1px solid var(--border); height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:100; }
+  .logo { font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .logo-dot { width:10px; height:10px; border-radius:50%; background:var(--amber); }
+  .nav-links { display:flex; gap:8px; }
+  .nav-link { padding:6px 12px; border:1px solid var(--border); border-radius:var(--r); font-size:12px; text-decoration:none; color:var(--text2); transition:all .15s; }
+  .nav-link:hover { border-color:var(--vp); color:var(--vp); }
+
+  /* MAIN */
+  .main { max-width:1200px; margin:0 auto; padding:20px 24px; }
+
+  /* DATE FILTER */
+  .date-filter { display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+  .date-filter label { font-size:12px; color:var(--text2); }
+  .date-filter input { padding:6px 10px; border:1px solid var(--border); border-radius:var(--r); background:var(--bg); color:var(--text); font-size:13px; font-family:inherit; }
+  .filter-btns { display:flex; gap:6px; margin-left:8px; }
+  .fb { padding:6px 14px; border:1px solid var(--border); border-radius:var(--r); font-size:12px; background:none; cursor:pointer; color:var(--text2); font-family:inherit; transition:all .15s; }
+  .fb.active { background:var(--vp); border-color:var(--vp); color:#fff; }
+
+  /* METRICS */
+  .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+  .metric { background:var(--bg2); border-radius:var(--rl); border:1px solid var(--border); padding:16px 18px; }
+  .m-lbl { font-size:11px; color:var(--text2); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px; }
+  .m-val { font-size:24px; font-weight:700; }
+  .m-sub { font-size:12px; color:var(--text3); margin-top:4px; }
+  .c-vp { color:var(--vp); } .c-hn { color:var(--hn); } .c-amber { color:var(--amber); } .c-red { color:var(--red); }
+
+  /* GRID */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+  .card { background:var(--bg2); border-radius:var(--rl); border:1px solid var(--border); padding:18px; }
+  .card-title { font-size:12px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.5px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
+  canvas { display:block; max-width:100%; }
+
+  /* CTV TABLE */
+  .ctv-table { width:100%; border-collapse:collapse; }
+  .ctv-table th { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.4px; padding:0 0 10px; text-align:left; border-bottom:1px solid var(--border); }
+  .ctv-table th:last-child, .ctv-table td:last-child { text-align:right; }
+  .ctv-row td { padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+  .ctv-row:last-child td { border-bottom:none; }
+  .ctv-av { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+  .ctv-name-cell { display:flex; align-items:center; gap:8px; }
+  .bar-wrap { width:80px; height:5px; background:var(--bg3); border-radius:3px; margin-top:3px; }
+  .bar-fill { height:100%; border-radius:3px; background:var(--amber); }
+  .commission { font-weight:700; color:var(--amber); }
+
+  /* DRIVER RANK */
+  .rank-table { width:100%; }
+  .rank-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .rank-row:last-child { border-bottom:none; }
+  .rank-num { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
+  .rn1 { background:#FAEEDA; color:var(--amber); }
+  .rn2 { background:var(--bg3); color:var(--text2); }
+  .rn3 { background:#EEECEA; color:var(--text3); }
+  .rank-info { flex:1; }
+  .rank-name { font-size:13px; font-weight:600; }
+  .rank-sub { font-size:11px; color:var(--text2); margin-top:1px; }
+  .stars { color:#EF9F27; font-size:13px; letter-spacing:-1px; }
+  .rating-val { font-size:12px; color:var(--text2); margin-left:2px; }
+
+  /* TRANSACTION TABLE */
+  .tx-table { width:100%; border-collapse:collapse; }
+  .tx-table th { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.4px; padding:0 0 10px; text-align:left; border-bottom:1px solid var(--border); }
+  .tx-table td { padding:9px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .tx-table tr:last-child td { border-bottom:none; }
+  .tx-status { font-size:11px; padding:2px 9px; border-radius:9px; font-weight:600; }
+  .tx-done { background:#E1F5EE; color:#0F6E56; }
+  .tx-pending { background:#FAEEDA; color:#BA7517; }
+  .tx-amount-pos { font-weight:700; color:var(--vp); }
+  .tx-amount-neg { font-weight:700; color:var(--red); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div>VNP Transport — Kế toán</div>
+  <div class="nav-links">
+    <a href="admin.html" class="nav-link">← Admin</a>
+    <a href="driver.html" class="nav-link" target="_blank">🚗 Lái xe</a>
+    <a href="chat.html" class="nav-link" target="_blank">💬 Chat</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- DATE FILTER -->
+  <div class="date-filter">
+    <label>Từ:</label><input type="date" id="date-from">
+    <label>Đến:</label><input type="date" id="date-to">
+    <div class="filter-btns">
+      <button class="fb active" onclick="setRange('today',this)">Hôm nay</button>
+      <button class="fb" onclick="setRange('week',this)">7 ngày</button>
+      <button class="fb" onclick="setRange('month',this)">Tháng này</button>
+      <button class="fb" onclick="setRange('year',this)">Năm nay</button>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics">
+    <div class="metric"><div class="m-lbl">Tổng thu</div><div class="m-val c-vp" id="m-thu">3.200.000đ</div><div class="m-sub">↑ 12% so hôm qua</div></div>
+    <div class="metric"><div class="m-lbl">Tổng chi</div><div class="m-val c-red" id="m-chi">820.000đ</div><div class="m-sub">Xăng · Bảo dưỡng</div></div>
+    <div class="metric"><div class="m-lbl">Lợi nhuận</div><div class="m-val c-amber" id="m-loi">2.380.000đ</div><div class="m-sub">Biên lợi nhuận 74%</div></div>
+    <div class="metric"><div class="m-lbl">Hoa hồng CTV</div><div class="m-val c-hn" id="m-ctv">480.000đ</div><div class="m-sub">4 CTV hoạt động</div></div>
+  </div>
+
+  <!-- CHARTS ROW 1 -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Doanh thu & Chi phí</div>
+      <canvas id="chart-rev" height="220"></canvas>
+    </div>
+    <div class="card">
+      <div class="card-title">Nguồn khách</div>
+      <canvas id="chart-source" height="220"></canvas>
+    </div>
+  </div>
+
+  <!-- CTV + DRIVER + TREND -->
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">Hoa hồng CTV <span style="font-size:11px;color:var(--amber)">Tháng 3</span></div>
+      <table class="ctv-table">
+        <thead><tr><th>CTV</th><th>Khách</th><th>Hoa hồng</th></tr></thead>
+        <tbody id="ctv-tbody"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Xếp hạng lái xe</div>
+      <div id="driver-rank"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Xu hướng 7 ngày</div>
+      <canvas id="chart-trend" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="card">
+    <div class="card-title">Giao dịch gần đây</div>
+    <table class="tx-table">
+      <thead><tr><th>Thời gian</th><th>Mô tả</th><th>Lái xe / CTV</th><th>Loại</th><th style="text-align:right">Số tiền</th></tr></thead>
+      <tbody id="tx-tbody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────
+const today = new Date();
+const fmt = d => d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'});
+
+const WEEK_LABELS = Array.from({length:7},(_,i)=>{const d=new Date(today);d.setDate(d.getDate()-6+i);return fmt(d);});
+const WEEK_REV =  [2800000,3100000,2600000,3400000,3200000,4100000,3200000];
+const WEEK_COST = [700000,800000,650000,900000,820000,1100000,820000];
+
+const CTV_DATA = [
+  {name:'Chị Oanh',color:'#1D9E75',rides:24,rate:15000},
+  {name:'Chị Thảo',color:'#185FA5',rides:18,rate:15000},
+  {name:'Thắng',   color:'#BA7517',rides:14,rate:15000},
+  {name:'Đăng',    color:'#A32D2D',rides:9, rate:15000},
+];
+
+const DRIVER_DATA = [
+  {name:'Anh Hùng',rides:32,rev:2560000,rating:5},
+  {name:'Anh Minh',rides:28,rev:2240000,rating:5},
+  {name:'Chị Lan', rides:22,rev:1760000,rating:4},
+  {name:'Anh Tuấn',rides:18,rev:1440000,rating:4},
+];
+
+const TX_DATA = [
+  {time:'08:45',desc:'Tiền khách Phúc Yên → Mỹ Đình',driver:'Anh Hùng',type:'Thu',amount:80000,status:'done'},
+  {time:'08:10',desc:'Tiền khách Vĩnh Yên → Cầu Giấy',driver:'Anh Minh',type:'Thu',amount:85000,status:'done'},
+  {time:'07:30',desc:'Đổ xăng xe 51B-12345',driver:'Anh Hùng',type:'Chi',amount:-200000,status:'done'},
+  {time:'07:00',desc:'Tiền khách Tam Đảo → Đống Đa',driver:'Chị Lan',type:'Thu',amount:90000,status:'done'},
+  {time:'06:50',desc:'Hoa hồng - Chị Oanh (2 khách)',driver:'Chị Oanh',type:'Chi',amount:-30000,status:'done'},
+  {time:'06:30',desc:'Tiền khách Mê Linh → Đống Đa',driver:'Anh Tuấn',type:'Thu',amount:80000,status:'done'},
+  {time:'06:00',desc:'Bảo dưỡng định kỳ xe 51B-67890',driver:'Chị Lan',type:'Chi',amount:-150000,status:'pending'},
+];
+
+// ── DATE FILTER ───────────────────────────────────────────
+const pad = n => String(n).padStart(2,'0');
+const toISO = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+document.getElementById('date-from').value = toISO(today);
+document.getElementById('date-to').value = toISO(today);
+
+function setRange(type, btn) {
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const from = new Date(today);
+  if (type === 'week') from.setDate(from.getDate()-6);
+  else if (type === 'month') from.setDate(1);
+  else if (type === 'year') { from.setMonth(0); from.setDate(1); }
+  document.getElementById('date-from').value = toISO(from);
+  document.getElementById('date-to').value = toISO(today);
+  updateCharts(type);
+}
+
+function updateCharts(range) {
+  let labels, rev, cost;
+  if (range === 'month') {
+    labels = Array.from({length:12},(_,i)=>'T'+(i+1));
+    rev  = [68,72,81,75,88,92,85,90,78,96,88,102].map(x=>x*1000000);
+    cost = [18,19,22,20,24,26,23,25,21,27,24,28].map(x=>x*1000000);
+  } else if (range === 'year') {
+    labels = ['2021','2022','2023','2024','2025'];
+    rev  = [820,940,1050,1180,1320].map(x=>x*1000000);
+    cost = [220,250,280,310,340].map(x=>x*1000000);
+  } else {
+    labels = WEEK_LABELS; rev = WEEK_REV; cost = WEEK_COST;
+  }
+  revChart.data.labels = labels;
+  revChart.data.datasets[0].data = rev;
+  revChart.data.datasets[1].data = cost;
+  revChart.update();
+}
+
+// ── CHART COLORS ──────────────────────────────────────────
+const dark = false; // Light mode only
+const gc = 'rgba(0,0,0,.55)';
+const tc = 'rgba(0,0,0,.06)';
+
+// ── REVENUE CHART ─────────────────────────────────────────
+const revChart = new Chart(document.getElementById('chart-rev').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: WEEK_LABELS,
+    datasets: [
+      { label:'Doanh thu', data:WEEK_REV,  backgroundColor:'rgba(29,158,117,.75)', borderRadius:5, borderSkipped:false },
+      { label:'Chi phí',   data:WEEK_COST, backgroundColor:'rgba(162,45,45,.55)',  borderRadius:5, borderSkipped:false }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, boxWidth:12, padding:14, color:gc } },
+      tooltip:{ callbacks:{ label: c => c.dataset.label+': '+c.raw.toLocaleString('vi-VN')+'đ' } } },
+    scales:{
+      x:{ grid:{color:tc}, ticks:{color:gc,font:{size:11}} },
+      y:{ grid:{color:tc}, ticks:{ color:gc, font:{size:11},
+          callback: v => v>=1000000?(v/1000000).toFixed(1)+'tr':v>=1000?(v/1000)+'k':v } }
+    }
+  }
+});
+
+// ── SOURCE CHART ──────────────────────────────────────────
+new Chart(document.getElementById('chart-source').getContext('2d'), {
+  type: 'doughnut',
+  data: {
+    labels:['Hotline','Khách cũ','Người quen','Zalo','Facebook'],
+    datasets:[{ data:[38,29,18,10,5],
+      backgroundColor:['rgba(29,158,117,.85)','rgba(24,95,165,.85)','rgba(186,117,23,.85)','rgba(93,202,165,.85)','rgba(135,138,128,.6)'],
+      borderWidth:0, hoverOffset:10 }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false, cutout:'60%',
+    plugins:{ legend:{ position:'right', labels:{ font:{size:12}, boxWidth:14, padding:12, color:gc } },
+      tooltip:{ callbacks:{ label: c => c.label+': '+c.raw+'%' } } }
+  }
+});
+
+// ── TREND CHART ───────────────────────────────────────────
+new Chart(document.getElementById('chart-trend').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: WEEK_LABELS,
+    datasets:[{
+      label:'Lợi nhuận', data: WEEK_REV.map((r,i)=>r-WEEK_COST[i]),
+      borderColor:'rgba(29,158,117,.9)', backgroundColor:'rgba(29,158,117,.08)',
+      fill:true, tension:.4, pointBackgroundColor:'rgba(29,158,117,1)', pointRadius:4
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false },
+      tooltip:{ callbacks:{ label: c => 'LN: '+c.raw.toLocaleString('vi-VN')+'đ' } } },
+    scales:{
+      x:{ grid:{color:tc}, ticks:{color:gc,font:{size:10}} },
+      y:{ grid:{color:tc}, ticks:{ color:gc, font:{size:10}, callback:v=>v>=1000000?(v/1000000).toFixed(1)+'tr':(v/1000).toFixed(0)+'k' } }
+    }
+  }
+});
+
+// ── CTV TABLE ─────────────────────────────────────────────
+const maxRides = Math.max(...CTV_DATA.map(c=>c.rides));
+document.getElementById('ctv-tbody').innerHTML = CTV_DATA.map(c => {
+  const comm = c.rides * c.rate;
+  return `<tr class="ctv-row">
+    <td><div class="ctv-name-cell">
+      <div class="ctv-av" style="background:${c.color}22;color:${c.color}">${c.name.slice(-2)}</div>
+      <div><div style="font-size:13px">${c.name}</div>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(c.rides/maxRides*100)}%"></div></div></div>
+    </div></td>
+    <td style="color:var(--text2)">${c.rides}</td>
+    <td class="commission">${comm.toLocaleString('vi-VN')}đ</td>
+  </tr>`;
+}).join('');
+
+// ── DRIVER RANK ───────────────────────────────────────────
+document.getElementById('driver-rank').innerHTML = DRIVER_DATA.map((d,i) => `
+  <div class="rank-row">
+    <div class="rank-num ${i===0?'rn1':i===1?'rn2':'rn3'}">${i+1}</div>
+    <div class="rank-info">
+      <div class="rank-name">${d.name}</div>
+      <div class="rank-sub">${d.rides} chuyến · ${d.rev.toLocaleString('vi-VN')}đ</div>
+    </div>
+    <div>
+      <span class="stars">${'★'.repeat(d.rating)}${'☆'.repeat(5-d.rating)}</span>
+      <span class="rating-val">${d.rating}.0</span>
+    </div>
+  </div>
+`).join('');
+
+// ── TRANSACTIONS ──────────────────────────────────────────
+document.getElementById('tx-tbody').innerHTML = TX_DATA.map(tx => `
+  <tr>
+    <td style="color:var(--text2);font-size:12px;white-space:nowrap">${tx.time} · ${new Date().toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'})}</td>
+    <td>${tx.desc}</td>
+    <td style="color:var(--text2);font-size:12px">${tx.driver}</td>
+    <td><span class="tx-status ${tx.status==='done'?'tx-done':'tx-pending'}">${tx.status==='done'?'Xong':'Chờ'}</span></td>
+    <td class="${tx.amount>0?'tx-amount-pos':'tx-amount-neg'}" style="text-align:right">
+      ${tx.amount>0?'+':''}${tx.amount.toLocaleString('vi-VN')}đ
+    </td>
+  </tr>
+`).join('');
+</script>
+</body>
+</html>

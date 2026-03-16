@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VNP — Chat nội bộ</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --vp:#1D9E75; --vp2:#0F6E56; --hn:#185FA5;
+    --bg:#F7F6F2; --bg2:#FFFFFF; --bg3:#EEECEA;
+    --border:rgba(0,0,0,.09); --border2:rgba(0,0,0,.16);
+    --text:#1a1a18; --text2:#6b6a65; --text3:#9c9b96;
+    --r:8px; --rl:14px;
+  }
+  
+  }
+  html, body { height:100%; background:#F7F6F2; color:#1a1a18; overflow:hidden; }
+  body { font-family:-apple-system,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:14px; display:flex; flex-direction:column; }
+
+  /* TOPBAR */
+  .topbar { background:var(--bg2); border-bottom:1px solid var(--border); height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; flex-shrink:0; }
+  .logo { font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .logo-dot { width:10px; height:10px; border-radius:50%; background:var(--hn); }
+  .nav-links { display:flex; gap:8px; }
+  .nav-link { padding:6px 12px; border:1px solid var(--border); border-radius:var(--r); font-size:12px; text-decoration:none; color:var(--text2); transition:all .15s; }
+  .nav-link:hover { border-color:var(--vp); color:var(--vp); }
+
+  /* LAYOUT */
+  .chat-layout { display:flex; flex:1; overflow:hidden; }
+
+  /* SIDEBAR */
+  .sidebar { width:290px; flex-shrink:0; background:var(--bg2); border-right:1px solid var(--border); display:flex; flex-direction:column; }
+  .sidebar-header { padding:14px 16px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .sidebar-title { font-size:13px; font-weight:600; margin-bottom:8px; }
+  .search-input { width:100%; padding:7px 10px; border:1px solid var(--border); border-radius:var(--r); background:var(--bg3); color:var(--text); font-size:12px; font-family:inherit; outline:none; }
+  .search-input:focus { border-color:var(--vp); }
+  .room-list { flex:1; overflow-y:auto; }
+  .room-item { padding:12px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .1s; display:flex; align-items:flex-start; gap:10px; }
+  .room-item:hover { background:var(--bg3); }
+  .room-item.active { background:var(--bg3); border-left:3px solid var(--vp); padding-left:13px; }
+  .room-av { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; margin-top:1px; }
+  .room-content { flex:1; min-width:0; }
+  .room-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:2px; }
+  .room-name { font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .room-time { font-size:10px; color:var(--text3); flex-shrink:0; margin-left:4px; }
+  .room-last { font-size:12px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .unread { width:18px; height:18px; border-radius:50%; background:var(--vp); color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px; }
+
+  /* MAIN CHAT */
+  .chat-main { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  .chat-header { padding:12px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:var(--bg2); }
+  .chat-header-left { display:flex; align-items:center; gap:10px; }
+  .chat-hav { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; flex-shrink:0; }
+  .chat-title { font-size:14px; font-weight:600; }
+  .chat-sub { font-size:12px; color:var(--text2); margin-top:1px; }
+  .chat-actions { display:flex; gap:8px; }
+  .btn-hdr { padding:7px 12px; border:1px solid var(--border2); border-radius:var(--r); background:none; cursor:pointer; font-size:12px; color:var(--text2); font-family:inherit; transition:all .15s; }
+  .btn-hdr:hover { border-color:var(--vp); color:var(--vp); }
+
+  /* MESSAGES */
+  .messages { flex:1; overflow-y:auto; padding:20px 18px; display:flex; flex-direction:column; gap:12px; background:var(--bg); }
+  .empty-chat { margin:auto; text-align:center; color:var(--text3); font-size:14px; }
+
+  .msg-group { display:flex; flex-direction:column; gap:3px; max-width:68%; }
+  .msg-group.me { align-self:flex-end; align-items:flex-end; }
+  .msg-group.them { align-self:flex-start; align-items:flex-start; }
+  .msg-sender { font-size:11px; color:var(--text2); margin-bottom:2px; display:flex; align-items:center; gap:5px; }
+  .msg-role { font-size:10px; padding:1px 6px; border-radius:6px; }
+  .role-admin { background:#E6F1FB; color:#185FA5; }
+  .role-driver { background:#E1F5EE; color:#0F6E56; }
+  .role-acc { background:#FAEEDA; color:#BA7517; }
+  .bubble { padding:9px 13px; border-radius:14px; font-size:13px; line-height:1.55; word-break:break-word; }
+  .me .bubble { background:var(--vp); color:#fff; border-bottom-right-radius:4px; }
+  .them .bubble { background:var(--bg2); border:1px solid var(--border); border-bottom-left-radius:4px; }
+  .msg-time { font-size:10px; color:var(--text3); }
+
+  /* CONTEXT NOTE (chú thích trong chuyến) */
+  .context-note { background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:10px 14px; margin: 0 18px 4px; font-size:12px; color:var(--text2); display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .context-note strong { color:var(--text); }
+
+  /* INPUT */
+  .input-area { padding:12px 18px; border-top:1px solid var(--border); background:var(--bg2); flex-shrink:0; }
+  .input-row { display:flex; align-items:flex-end; gap:8px; }
+  .input-box { flex:1; padding:9px 14px; border:1px solid var(--border); border-radius:18px; background:var(--bg3); color:var(--text); font-size:13px; font-family:inherit; outline:none; resize:none; line-height:1.4; max-height:100px; transition:border-color .15s; }
+  .input-box:focus { border-color:var(--vp); background:var(--bg2); }
+  .send-btn { width:38px; height:38px; border-radius:50%; background:var(--vp); border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s; }
+  .send-btn:hover { background:var(--vp2); }
+  .send-btn:active { transform:scale(.93); }
+  .send-btn svg { width:16px; height:16px; fill:#fff; }
+  .input-hint { font-size:11px; color:var(--text3); margin-top:6px; text-align:center; }
+
+  /* PLACEHOLDER */
+  .chat-placeholder { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--text3); }
+  .chat-placeholder svg { opacity:.3; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div>VNP Transport — Chat nội bộ</div>
+  <div class="nav-links">
+    <a href="admin.html" class="nav-link">← Admin</a>
+    <a href="driver.html" class="nav-link" target="_blank">🚗 Lái xe</a>
+    <a href="accounting.html" class="nav-link" target="_blank">📊 Kế toán</a>
+  </div>
+</div>
+
+<div class="chat-layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">💬 Kênh chat</div>
+      <input class="search-input" id="search" placeholder="Tìm kiếm..." oninput="filterRooms()">
+    </div>
+    <div class="room-list" id="room-list"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="chat-main" id="chat-main">
+    <div class="chat-placeholder">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none"><path d="M32 8C18.7 8 8 17.5 8 29c0 6.5 3.4 12.3 8.8 16.2L14 56l10.8-5.5C26.8 51.2 29.4 51.5 32 51.5c13.3 0 24-9.5 24-22.5S45.3 8 32 8z" stroke="currentColor" stroke-width="2.5" fill="none"/></svg>
+      <span>Chọn kênh chat để bắt đầu</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────
+const ME = {name:'Điều phối',role:'admin'};
+
+const ROOMS = [
+  {id:'general',type:'group',name:'Nhóm chung',sub:'Admin · 4 lái xe',av:'👥',color:'#185FA5',
+   context:null, unread:2},
+  {id:'trip-1',type:'trip',name:'Chuyến 06:30 — Anh Tuấn',sub:'0912 345 678 · Phúc Yên → Mỹ Đình',av:'🚗',color:'#1D9E75',
+   context:{pickup:'Phúc Yên, Vĩnh Phúc',dropoff:'Mỹ Đình, Hà Nội',price:'80.000đ',driver:'Anh Hùng'}, unread:1},
+  {id:'trip-2',type:'trip',name:'Chuyến 07:00 — Chị Mai',sub:'0987 654 321 · Vĩnh Yên → Cầu Giấy',av:'🚗',color:'#1D9E75',
+   context:{pickup:'Vĩnh Yên, VP',dropoff:'Cầu Giấy, HN',price:'85.000đ',driver:'Anh Minh'}, unread:0},
+  {id:'trip-3',type:'trip',name:'Chuyến 07:30 — Anh Bình',sub:'0901 111 222 · Tam Đảo → Đống Đa',av:'🚗',color:'#1D9E75',
+   context:{pickup:'Tam Đảo, VP',dropoff:'Đống Đa, HN',price:'90.000đ',driver:'Anh Tuấn'}, unread:0},
+  {id:'trip-4',type:'trip',name:'Chuyến 08:00 — Chị Hoa',sub:'0978 888 999 · Bình Xuyên → Long Biên',av:'🚗',color:'#1D9E75',
+   context:{pickup:'Bình Xuyên, VP',dropoff:'Long Biên, HN',price:'80.000đ',driver:'Chị Lan'}, unread:0},
+  {id:'driver-hung',type:'private',name:'Anh Hùng',sub:'Lái xe · Đang trên đường',av:'🧑',color:'#BA7517', context:null, unread:0},
+  {id:'driver-minh',type:'private',name:'Anh Minh',sub:'Lái xe · Đang đón khách',av:'👨',color:'#A32D2D', context:null, unread:0},
+  {id:'accounting',type:'private',name:'Phòng kế toán',sub:'Chị Hương',av:'💼',color:'#185FA5', context:null, unread:0},
+];
+
+const MESSAGES = {
+  'general': [
+    {sender:'Điều phối',role:'admin',text:'Các anh chị lưu ý: đường Láng đang ùn tắc từ 7h - 9h, đi đường Trần Duy Hưng hoặc Khuất Duy Tiến.',time:'06:50',me:false},
+    {sender:'Anh Hùng',role:'driver',text:'Vâng em nắm rồi ạ, đang đi Trần Duy Hưng.',time:'06:52',me:false},
+    {sender:'Chị Lan',role:'driver',text:'Ok cảm ơn anh, em đang trên Khuất Duy Tiến.',time:'06:53',me:false},
+    {sender:'Điều phối',role:'admin',text:'Oke các bạn nhớ cập nhật trạng thái sau khi đón nhé!',time:'06:55',me:true},
+  ],
+  'trip-1': [
+    {sender:'Điều phối',role:'admin',text:'Anh Hùng ơi, khách anh Tuấn đổi điểm đón sang đầu ngõ 10 Hai Bà Trưng nhé, không phải số nhà 45.',time:'06:15',me:true},
+    {sender:'Anh Hùng',role:'driver',text:'Ok em hiểu rồi, đang rẽ vào ngõ.',time:'06:18',me:false},
+    {sender:'Điều phối',role:'admin',text:'Khách đứng trước cổng màu xanh, mặc áo khoác đỏ.',time:'06:20',me:true},
+    {sender:'Anh Hùng',role:'driver',text:'Thấy khách rồi ạ 👍',time:'06:22',me:false},
+  ],
+  'trip-2': [
+    {sender:'Anh Minh',role:'driver',text:'Gọi cho khách chị Mai mấy lần không bắt máy, anh ơi.',time:'06:55',me:false},
+    {sender:'Điều phối',role:'admin',text:'Để mình gọi lại ngay, anh chờ 2 phút.',time:'06:56',me:true},
+    {sender:'Điều phối',role:'admin',text:'Xong rồi, khách bảo đang xuống cầu thang, 2 phút nữa ra.',time:'06:58',me:true},
+    {sender:'Anh Minh',role:'driver',text:'Ok em đợi.',time:'06:59',me:false},
+  ],
+  'trip-3': [
+    {sender:'Điều phối',role:'admin',text:'Anh Tuấn ơi, chuyến 07:30 khách ở Tam Đảo vào, anh chú ý đường lên Tam Đảo hay kẹt lúc sáng.',time:'07:10',me:true},
+    {sender:'Anh Tuấn',role:'driver',text:'Vâng em đi đường tránh, ok ạ.',time:'07:12',me:false},
+  ],
+  'trip-4': [],
+  'driver-hung': [
+    {sender:'Điều phối',role:'admin',text:'Anh Hùng còn trống chuyến buổi chiều không?',time:'10:00',me:true},
+    {sender:'Anh Hùng',role:'driver',text:'Dạ còn anh ạ, từ 2h chiều em rảnh.',time:'10:02',me:false},
+  ],
+  'driver-minh': [],
+  'accounting': [
+    {sender:'Chị Hương',role:'acc',text:'Anh ơi, cuối tháng nhớ chuyển bảng tổng hợp thu chi tháng 3 cho em với ạ.',time:'09:00',me:false},
+    {sender:'Điều phối',role:'admin',text:'Ok chị, đầu tháng 4 em gửi.',time:'09:05',me:true},
+  ],
+};
+
+let currentRoom = null;
+let typingTimer = null;
+
+// ── RENDER SIDEBAR ────────────────────────────────────────
+function renderRooms(filter='') {
+  const list = ROOMS.filter(r => r.name.toLowerCase().includes(filter.toLowerCase()) || r.sub.toLowerCase().includes(filter.toLowerCase()));
+  const groups = [
+    {label:'Nhóm', items: list.filter(r=>r.type==='group')},
+    {label:'Theo chuyến', items: list.filter(r=>r.type==='trip')},
+    {label:'Riêng tư', items: list.filter(r=>r.type==='private')},
+  ];
+  document.getElementById('room-list').innerHTML = groups.map(g => {
+    if (!g.items.length) return '';
+    return `<div style="padding:8px 16px 4px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${g.label}</div>` +
+    g.items.map(r => {
+      const msgs = MESSAGES[r.id] || [];
+      const last = msgs.length ? msgs[msgs.length-1] : null;
+      return `
+      <div class="room-item ${currentRoom===r.id?'active':''}" onclick="openRoom('${r.id}')">
+        <div class="room-av" style="background:${r.color}22;color:${r.color}">${r.av}</div>
+        <div class="room-content">
+          <div class="room-top">
+            <span class="room-name">${r.name}</span>
+            ${last?`<span class="room-time">${last.time}</span>`:''}
+            ${r.unread?`<span class="unread">${r.unread}</span>`:''}
+          </div>
+          <div class="room-last">${last?(last.sender+': '+last.text):'Chưa có tin nhắn'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }).join('');
+}
+
+function filterRooms() { renderRooms(document.getElementById('search').value); }
+
+// ── OPEN ROOM ─────────────────────────────────────────────
+function openRoom(id) {
+  currentRoom = id;
+  const room = ROOMS.find(r=>r.id===id);
+  room.unread = 0;
+  renderRooms(document.getElementById('search').value);
+  renderChatMain(room);
+}
+
+function renderChatMain(room) {
+  const msgs = MESSAGES[room.id] || [];
+  const main = document.getElementById('chat-main');
+
+  const contextHTML = room.context ? `
+    <div class="context-note">
+      📍 <strong>${room.context.pickup}</strong> → <strong>${room.context.dropoff}</strong>
+      &nbsp;·&nbsp; 🚗 ${room.context.driver}
+      &nbsp;·&nbsp; 💰 ${room.context.price}
+    </div>` : '';
+
+  const msgsHTML = msgs.length
+    ? msgs.map(m => msgHTML(m)).join('')
+    : '<div class="empty-chat">Chưa có tin nhắn</div>';
+
+  main.innerHTML = `
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="chat-hav" style="background:${room.color}22;color:${room.color}">${room.av}</div>
+        <div>
+          <div class="chat-title">${room.name}</div>
+          <div class="chat-sub">${room.sub}</div>
+        </div>
+      </div>
+      <div class="chat-actions">
+        ${room.type==='trip'?`<button class="btn-hdr" onclick="callDriver('${room.id}')">📞 Gọi lái xe</button>`:''}
+        <button class="btn-hdr" onclick="pinNote('${room.id}')">📌 Ghim ghi chú</button>
+      </div>
+    </div>
+    ${contextHTML}
+    <div class="messages" id="msg-area">${msgsHTML}</div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="input-box" id="msg-input" placeholder="Nhập tin nhắn..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" onclick="sendMsg()">
+          <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">Enter để gửi · Shift+Enter xuống dòng</div>
+    </div>
+  `;
+  scrollBottom();
+  document.getElementById('msg-input').focus();
+}
+
+function msgHTML(m) {
+  const roleLabel = {admin:'Admin',driver:'Lái xe',acc:'Kế toán'}[m.role]||m.role;
+  const roleCls = {admin:'role-admin',driver:'role-driver',acc:'role-acc'}[m.role]||'';
+  return `
+  <div class="msg-group ${m.me?'me':'them'}">
+    ${!m.me ? `<div class="msg-sender"><span>${m.sender}</span><span class="msg-role ${roleCls}">${roleLabel}</span></div>` : ''}
+    <div class="bubble">${escHTML(m.text)}</div>
+    <div class="msg-time">${m.time}</div>
+  </div>`;
+}
+
+// ── SEND MESSAGE ──────────────────────────────────────────
+function sendMsg() {
+  if (!currentRoom) return;
+  const inp = document.getElementById('msg-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  if (!MESSAGES[currentRoom]) MESSAGES[currentRoom] = [];
+  const msg = {sender:ME.name, role:ME.role, text, time, me:true};
+  MESSAGES[currentRoom].push(msg);
+  inp.value = '';
+  inp.style.height = '';
+  // Append to DOM
+  const area = document.getElementById('msg-area');
+  if (area.querySelector('.empty-chat')) area.innerHTML = '';
+  const div = document.createElement('div');
+  div.innerHTML = msgHTML(msg);
+  area.appendChild(div.firstElementChild);
+  scrollBottom();
+  renderRooms(document.getElementById('search').value);
+  // Simulate reply after 1.5s for trip rooms
+  if (currentRoom.startsWith('trip') && Math.random() > 0.4) {
+    simulateReply();
+  }
+}
+
+function simulateReply() {
+  const replies = ['Ok anh/chị ạ!','Vâng em hiểu rồi.','Được ạ.','Em đang xử lý.','Khách lên xe rồi.','Ok 👍'];
+  const drivers = ['Anh Hùng','Anh Minh','Chị Lan','Anh Tuấn'];
+  setTimeout(() => {
+    if (!currentRoom) return;
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2,'0') + ':' + (now.getMinutes()+1).toString().padStart(2,'0');
+    const msg = {
+      sender: drivers[Math.floor(Math.random()*drivers.length)],
+      role:'driver', text:replies[Math.floor(Math.random()*replies.length)], time, me:false
+    };
+    MESSAGES[currentRoom].push(msg);
+    const area = document.getElementById('msg-area');
+    if (area) {
+      const div = document.createElement('div');
+      div.innerHTML = msgHTML(msg);
+      area.appendChild(div.firstElementChild);
+      scrollBottom();
+    }
+    renderRooms(document.getElementById('search').value);
+  }, 1500 + Math.random()*1000);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+}
+
+function autoResize(el) {
+  el.style.height = '';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function scrollBottom() {
+  setTimeout(() => {
+    const area = document.getElementById('msg-area');
+    if (area) area.scrollTop = area.scrollHeight;
+  }, 50);
+}
+
+function escHTML(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function callDriver(roomId) {
+  const room = ROOMS.find(r=>r.id===roomId);
+  alert('📞 Gọi lái xe: ' + room.name + '\n' + room.sub);
+}
+
+function pinNote(roomId) {
+  const note = prompt('Ghim ghi chú cho kênh này:');
+  if (note) alert('✅ Đã ghim: "' + note + '"');
+}
+
+// ── INIT ──────────────────────────────────────────────────
+renderRooms();
+
+// Auto-open room from URL hash
+const hash = location.hash.replace('#','');
+if (hash && ROOMS.find(r=>r.id===hash)) {
+  openRoom(hash);
+} else {
+  openRoom('general');
+}
+</script>
+</body>
+</html>
